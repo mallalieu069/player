@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
+    <title>WEB Video Player</title>
+    <link rel="stylesheet" href="assets/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <script src="https://content.jwplatform.com/libraries/SAHhwvZq.js"></script>
+    <script disable-devtool-auto src='https://cdn.jsdelivr.net/npm/disable-devtool'></script>
+    <script src="assets/player.js"></script>
+</head>
+<body>
+
+    <div class="container">
+        <div id="player"></div>
+        <form id="videoForm" onsubmit="playVideo(event);">
+            <div class="input-group">
+                <i class="fas fa-link"></i>
+                <input type="text" id="link" name="link" placeholder="Enter MPD or HLS link" required>
+            </div>
+
+            <div class="input-group">
+                <i class="fas fa-key"></i>
+                <input type="text" id="clearKeyPair" name="clearKeyPair" placeholder="Enter Clear Key ID and Key (e.g., keyId:key)">
+            </div>
+
+            <div class="input-group">
+                <i class="fas fa-lock"></i>
+                <input type="text" id="widevineLicenseUrl" name="widevineLicenseUrl" placeholder="Enter Widevine License URL (optional)">
+            </div>
+
+            <div class="input-group">
+                <i class="fas fa-link"></i>
+                <input type="text" id="clearKeyUrl" name="clearKeyUrl" placeholder="Enter ClearKey URL (optional)">
+            </div>
+
+            <button type="submit">
+                Play
+            </button>
+        </form>
+    </div>
+
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"94131a27beeb4811","version":"2025.4.0-1-g37f21b1","r":1,"token":"443afb7c1f6846a398db1db4a6718dae","serverTiming":{"name":{"cfExtPri":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}}}' crossorigin="anonymous"></script>
+</body>
+</html>
