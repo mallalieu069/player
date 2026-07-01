@@ -1,47 +1,631 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"/>
-    <title>WEB Video Player</title>
-    <link rel="stylesheet" href="assets/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-    <script src="https://content.jwplatform.com/libraries/SAHhwvZq.js"></script>
-    <script disable-devtool-auto src='https://cdn.jsdelivr.net/npm/disable-devtool'></script>
-    <script src="assets/player.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Premium Advanced DRM Player</title>
+  
+  <!-- mux.js for HLS TS segments support -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mux.js/7.1.0/mux.min.js"></script>
+
+  <!-- Shaka Player -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.6/shaka-player.ui.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.6/controls.min.css">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-dark: #09090e;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --border-card: rgba(255, 255, 255, 0.08);
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --glass-blur: blur(20px);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-image: 
+        radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(244, 63, 94, 0.12), transparent 25%);
+      overflow: hidden;
+    }
+
+    /* Container & Glassmorphism */
+    #setup-container {
+      width: 100%;
+      max-width: 600px;
+      padding: 2rem;
+      z-index: 10;
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .glass-card {
+      background: var(--bg-card);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--border-card);
+      border-radius: 24px;
+      padding: 2.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    #setup-container.hidden {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.95);
+      pointer-events: none;
+      position: absolute;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a5b4fc, #c084fc, #f43f5e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 300;
+    }
+
+    /* Form Elements */
+    .form-group {
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    input[type="text"], textarea, select {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      transition: all 0.3s ease;
+      outline: none;
+    }
+
+    input[type="text"]:focus, textarea:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+
+    /* DRM Tabs / Select */
+    .drm-options {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+
+    .drm-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-card);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      color: var(--text-muted);
+    }
+
+    .drm-tab:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .drm-tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+    }
+
+    .conditional-group {
+      display: none;
+      animation: fadeIn 0.4s ease forwards;
+    }
+
+    .conditional-group.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Button */
+    .btn-play {
+      width: 100%;
+      background: linear-gradient(135deg, var(--primary), #8b5cf6);
+      color: #fff;
+      border: none;
+      padding: 16px;
+      border-radius: 14px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 20px rgba(99, 102, 241, 0.25);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 2rem;
+    }
+
+    .btn-play:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 15px 25px rgba(99, 102, 241, 0.35);
+    }
+
+    .btn-play:active {
+      transform: translateY(1px);
+    }
+
+    /* Video Player */
+    #video-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #video-wrapper.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #video-container {
+      flex: 1;
+      width: 100%;
+      position: relative;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+    }
+    
+    /* Shaka UI Premium Tweaks */
+    
+    /* Control Bar Overlay */
+    .shaka-bottom-controls {
+      background: linear-gradient(to top, rgba(9, 9, 14, 0.9) 0%, rgba(9, 9, 14, 0.6) 50%, transparent 100%) !important;
+      padding-bottom: 15px !important;
+      padding-left: 20px !important;
+      padding-right: 20px !important;
+    }
+    
+    /* Buttons */
+    .shaka-controls-button-panel .material-icons-round {
+      color: #fff !important;
+      transition: all 0.2s ease !important;
+    }
+    .shaka-controls-button-panel button:hover .material-icons-round {
+      color: var(--primary) !important;
+      transform: scale(1.1);
+    }
+    
+    /* Seek Bar */
+    .shaka-seek-bar-container {
+      margin-bottom: 12px !important;
+    }
+    .shaka-seek-bar-container .shaka-seek-bar {
+      --shaka-seek-bar-played-color: var(--primary) !important;
+      --shaka-seek-bar-buffered-color: rgba(255, 255, 255, 0.3) !important;
+      --shaka-seek-bar-base-color: rgba(255, 255, 255, 0.1) !important;
+      height: 6px !important;
+      border-radius: 4px !important;
+      transition: height 0.2s ease !important;
+    }
+    .shaka-seek-bar-container:hover .shaka-seek-bar {
+      height: 8px !important;
+    }
+    
+    /* Menus (Quality, CC, Settings) */
+    .shaka-overflow-menu, .shaka-settings-menu {
+      background: rgba(15, 15, 20, 0.85) !important;
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255,255,255,0.1) !important;
+      border-radius: 16px !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+      padding: 8px !important;
+      color: var(--text-main) !important;
+      font-family: 'Outfit', sans-serif !important;
+    }
+    
+    .shaka-overflow-menu button, .shaka-settings-menu button {
+      border-radius: 8px !important;
+      transition: background 0.2s ease !important;
+      color: var(--text-main) !important;
+    }
+    
+    .shaka-overflow-menu button:hover, .shaka-settings-menu button:hover {
+      background: rgba(99, 102, 241, 0.2) !important;
+    }
+    
+    .shaka-overflow-menu i, .shaka-settings-menu i, 
+    .shaka-overflow-menu span, .shaka-settings-menu span {
+      color: var(--text-main) !important;
+    }
+    
+    /* Big Play Button Overlay */
+    .shaka-play-button-container .shaka-play-button {
+      background: rgba(99, 102, 241, 0.8) !important;
+      backdrop-filter: blur(5px) !important;
+      border: 1px solid rgba(255,255,255,0.2) !important;
+      box-shadow: 0 0 30px rgba(99, 102, 241, 0.4) !important;
+      border-radius: 50% !important;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+    }
+    
+    .shaka-play-button-container .shaka-play-button:hover {
+      transform: scale(1.15) !important;
+      background: rgba(99, 102, 241, 1) !important;
+      box-shadow: 0 0 40px rgba(99, 102, 241, 0.6) !important;
+    }
+    
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 60;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s;
+    }
+    
+    .back-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Error Message */
+    #error-msg {
+      background: rgba(244, 63, 94, 0.1);
+      color: var(--accent);
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(244, 63, 94, 0.2);
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      display: none;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <div id="player"></div>
-        <form id="videoForm" onsubmit="playVideo(event);">
-            <div class="input-group">
-                <i class="fas fa-link"></i>
-                <input type="text" id="link" name="link" placeholder="Enter MPD or HLS link" required>
-            </div>
+  <!-- Setup UI -->
+  <div id="setup-container">
+    <div class="glass-card">
+      <header>
+        <h1>Advanced Pro Player</h1>
+        <p>Premium stream playback with full DRM header injection support</p>
+      </header>
 
-            <div class="input-group">
-                <i class="fas fa-key"></i>
-                <input type="text" id="clearKeyPair" name="clearKeyPair" placeholder="Enter Clear Key ID and Key (e.g., keyId:key)">
-            </div>
+      <div class="form-group">
+        <label for="stream-url">Stream URL (DASH/HLS)</label>
+        <input type="text" id="stream-url" placeholder="https://example.com/stream.mpd" autocomplete="off">
+      </div>
 
-            <div class="input-group">
-                <i class="fas fa-lock"></i>
-                <input type="text" id="widevineLicenseUrl" name="widevineLicenseUrl" placeholder="Enter Widevine License URL (optional)">
-            </div>
+      <label>DRM Protection Type</label>
+      <div class="drm-options">
+        <div class="drm-tab active" data-type="none">None</div>
+        <div class="drm-tab" data-type="widevine">Widevine</div>
+        <div class="drm-tab" data-type="playready">PlayReady</div>
+        <div class="drm-tab" data-type="clearkey">ClearKey</div>
+      </div>
 
-            <div class="input-group">
-                <i class="fas fa-link"></i>
-                <input type="text" id="clearKeyUrl" name="clearKeyUrl" placeholder="Enter ClearKey URL (optional)">
-            </div>
+      <!-- License Server (Widevine / PlayReady) -->
+      <div class="conditional-group" id="group-license">
+        <div class="form-group">
+          <label for="license-url">License Server URL</label>
+          <input type="text" id="license-url" placeholder="https://license-server.com/acquire">
+        </div>
+        <div class="form-group">
+          <label for="custom-headers">Custom Headers (JSON)</label>
+          <textarea id="custom-headers" placeholder='{
+  "Authorization": "Bearer token",
+  "CustomData": "xyz123"
+}'></textarea>
+        </div>
+      </div>
 
-            <button type="submit">
-                Play
-            </button>
-        </form>
+      <!-- ClearKey (Key ID / Key) -->
+      <div class="conditional-group" id="group-clearkey">
+        <div class="form-group">
+          <label for="key-id">Key ID (Hex)</label>
+          <input type="text" id="key-id" placeholder="e.g. 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p">
+        </div>
+        <div class="form-group">
+          <label for="key-val">Key (Hex)</label>
+          <input type="text" id="key-val" placeholder="e.g. 1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p">
+        </div>
+      </div>
+
+      <div id="error-msg"></div>
+
+      <button class="btn-play" id="btn-play">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Initialize Playback
+      </button>
     </div>
+  </div>
 
-<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"94131a27beeb4811","version":"2025.4.0-1-g37f21b1","r":1,"token":"443afb7c1f6846a398db1db4a6718dae","serverTiming":{"name":{"cfExtPri":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}}}' crossorigin="anonymous"></script>
+  <!-- Player UI -->
+  <div id="video-wrapper">
+    <button class="back-btn" id="btn-back">← Back to Setup</button>
+    <div id="video-container" data-shaka-player-container>
+      <video autoplay data-shaka-player id="video"></video>
+    </div>
+  </div>
+
+  <script>
+    // UI Logic
+    const tabs = document.querySelectorAll('.drm-tab');
+    let currentDrmType = 'none';
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentDrmType = tab.dataset.type;
+        
+        document.getElementById('group-license').classList.remove('active');
+        document.getElementById('group-clearkey').classList.remove('active');
+
+        if (currentDrmType === 'widevine' || currentDrmType === 'playready') {
+          document.getElementById('group-license').classList.add('active');
+        } else if (currentDrmType === 'clearkey') {
+          document.getElementById('group-clearkey').classList.add('active');
+        }
+      });
+    });
+
+    const showError = (msg) => {
+      const errEl = document.getElementById('error-msg');
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+      setTimeout(() => errEl.style.display = 'none', 5000);
+    };
+
+    // Player Logic
+    let player;
+
+    async function initApp() {
+      // Shaka UI already initializes polyfills and the player instance.
+      const video = document.getElementById('video');
+      const ui = video['ui'];
+      const controls = ui.getControls();
+      player = controls.getPlayer();
+      
+      player.addEventListener('error', onPlayerError);
+      controls.addEventListener('error', onPlayerError);
+
+      document.getElementById('btn-play').addEventListener('click', loadStream);
+      document.getElementById('btn-back').addEventListener('click', closeStream);
+
+      // Auto-load from URL parameters for direct share links
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('stream')) {
+        document.getElementById('stream-url').value = params.get('stream');
+        const scheme = params.get('drmScheme');
+        if (scheme) {
+          const tab = Array.from(document.querySelectorAll('.drm-tab')).find(t => t.dataset.type === scheme.toLowerCase());
+          if (tab) tab.click();
+          
+          const license = params.get('drmLicense');
+          if (license) {
+            if (scheme.toLowerCase() === 'clearkey') {
+              const parts = license.split(':');
+              if (parts.length >= 2) {
+                document.getElementById('key-id').value = parts[0];
+                document.getElementById('key-val').value = parts.slice(1).join(':');
+              }
+            } else {
+              document.getElementById('license-url').value = license;
+            }
+          }
+        }
+        setTimeout(loadStream, 200);
+      }
+    }
+
+    async function loadStream() {
+      let rawInput = document.getElementById('stream-url').value.trim();
+      if (!rawInput) return showError('Please enter a stream URL');
+
+      // Intercept piped URL syntax
+      if (rawInput.includes('|')) {
+        const parts = rawInput.split('|');
+        const parsedStream = parts[0];
+        const pipedParams = new URLSearchParams(parts[1]);
+        const pipedScheme = pipedParams.get('drmScheme');
+        const pipedLicense = pipedParams.get('drmLicense');
+        
+        document.getElementById('stream-url').value = parsedStream;
+        
+        if (pipedScheme) {
+          const tab = Array.from(document.querySelectorAll('.drm-tab')).find(t => t.dataset.type === pipedScheme.toLowerCase());
+          if (tab) tab.click();
+        }
+        if (pipedLicense) {
+          if (pipedScheme && pipedScheme.toLowerCase() === 'clearkey') {
+             const keyParts = pipedLicense.split(':');
+             if (keyParts.length >= 2) {
+               document.getElementById('key-id').value = keyParts[0];
+               document.getElementById('key-val').value = keyParts.slice(1).join(':');
+             }
+          } else {
+             document.getElementById('license-url').value = pipedLicense;
+          }
+        }
+      }
+
+      const streamUrl = document.getElementById('stream-url').value.trim();
+
+      const config = {
+        drm: { servers: {}, clearKeys: {}, advanced: {} },
+        streaming: {
+          ignoreTextStreamFailures: true,
+          alwaysStreamText: true
+        },
+        manifest: {
+          hls: {
+            ignoreTextStreamFailures: true,
+            ignoreImageStreamFailures: true
+          }
+        }
+      };
+
+      // Header Interceptor function
+      const customHeadersText = document.getElementById('custom-headers').value.trim();
+      let customHeaders = {};
+      if (customHeadersText) {
+        try {
+          customHeaders = JSON.parse(customHeadersText);
+        } catch(e) {
+          return showError('Invalid JSON format for custom headers');
+        }
+      }
+
+      player.getNetworkingEngine().clearAllRequestFilters();
+      
+      if (Object.keys(customHeaders).length > 0) {
+        player.getNetworkingEngine().registerRequestFilter(function(type, request) {
+          if (type === shaka.net.NetworkingEngine.RequestType.LICENSE) {
+            for (let key in customHeaders) {
+              request.headers[key] = customHeaders[key];
+            }
+          }
+        });
+      }
+
+      if (currentDrmType === 'widevine') {
+        const license = document.getElementById('license-url').value.trim();
+        if (!license) return showError('License URL required for Widevine');
+        config.drm.servers['com.widevine.alpha'] = license;
+      } else if (currentDrmType === 'playready') {
+        const license = document.getElementById('license-url').value.trim();
+        if (!license) return showError('License URL required for PlayReady');
+        config.drm.servers['com.microsoft.playready'] = license;
+      } else if (currentDrmType === 'clearkey') {
+        const kid = document.getElementById('key-id').value.trim();
+        const key = document.getElementById('key-val').value.trim();
+        if (!kid || !key) return showError('Key ID and Key are required for ClearKey');
+        config.drm.clearKeys[kid] = key;
+      }
+
+      // Update shareable URL bar
+      const url = new URL(window.location);
+      url.searchParams.set('stream', streamUrl);
+      url.searchParams.set('drmScheme', currentDrmType);
+      
+      if (currentDrmType === 'clearkey') {
+        url.searchParams.set('drmLicense', `${document.getElementById('key-id').value.trim()}:${document.getElementById('key-val').value.trim()}`);
+      } else if (currentDrmType === 'widevine' || currentDrmType === 'playready') {
+        url.searchParams.set('drmLicense', document.getElementById('license-url').value.trim());
+      } else {
+        url.searchParams.delete('drmLicense');
+      }
+      window.history.pushState({}, '', url);
+
+      try {
+        player.configure(config);
+        await player.load(streamUrl);
+        
+        // Transition UI
+        document.getElementById('setup-container').classList.add('hidden');
+        document.getElementById('video-wrapper').classList.add('active');
+        
+      } catch (e) {
+        onPlayerError(e);
+      }
+    }
+
+    function closeStream() {
+      player.unload();
+      document.getElementById('video-wrapper').classList.remove('active');
+      document.getElementById('setup-container').classList.remove('hidden');
+      
+      const url = new URL(window.location);
+      url.search = '';
+      window.history.pushState({}, '', url);
+    }
+
+    function onPlayerError(error) {
+      console.error('Error code', error.code, 'object', error);
+      showError(`Playback error (code ${error.code || error.detail?.code}). Check console.`);
+    }
+
+    document.addEventListener('shaka-ui-loaded', initApp);
+  </script>
 </body>
 </html>
