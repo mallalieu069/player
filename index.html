@@ -375,6 +375,16 @@
         <input type="text" id="stream-url" placeholder="https://example.com/stream.mpd" autocomplete="off">
       </div>
 
+      <div class="form-group">
+        <label for="proxy-select">CORS Proxy (Select Region to bypass blocks)</label>
+        <select id="proxy-select">
+          <option value="">No Proxy (Direct Play)</option>
+          <option value="https://shiny-dew-461b.mallalieu069-b92.workers.dev/">US Proxy</option>
+          <option value="https://sparkling-wildflower-5984.mallalieu069-b92.workers.dev/">AUS Proxy</option>
+          <option value="https://proxy.mallalieu069-b92.workers.dev/">UK Proxy</option>
+        </select>
+      </div>
+
       <label>DRM Protection Type</label>
       <div class="drm-options">
         <div class="drm-tab active" data-type="none">None</div>
@@ -476,6 +486,7 @@
       const params = new URLSearchParams(window.location.search);
       if (params.has('stream')) {
         document.getElementById('stream-url').value = params.get('stream');
+        if (params.has('proxy')) document.getElementById('proxy-select').value = params.get('proxy');
         const scheme = params.get('drmScheme');
         if (scheme) {
           const tab = Array.from(document.querySelectorAll('.drm-tab')).find(t => t.dataset.type === scheme.toLowerCase());
@@ -529,7 +540,9 @@
         }
       }
 
-      const streamUrl = document.getElementById('stream-url').value.trim();
+      const rawStreamUrl = document.getElementById('stream-url').value.trim();
+      const proxyPrefix = document.getElementById('proxy-select').value;
+      const streamUrl = proxyPrefix ? proxyPrefix + rawStreamUrl : rawStreamUrl;
 
       const config = {
         drm: { servers: {}, clearKeys: {}, advanced: {} },
@@ -569,12 +582,14 @@
       }
 
       if (currentDrmType === 'widevine') {
-        const license = document.getElementById('license-url').value.trim();
+        let license = document.getElementById('license-url').value.trim();
         if (!license) return showError('License URL required for Widevine');
+        if (proxyPrefix && !license.startsWith(proxyPrefix)) license = proxyPrefix + license;
         config.drm.servers['com.widevine.alpha'] = license;
       } else if (currentDrmType === 'playready') {
-        const license = document.getElementById('license-url').value.trim();
+        let license = document.getElementById('license-url').value.trim();
         if (!license) return showError('License URL required for PlayReady');
+        if (proxyPrefix && !license.startsWith(proxyPrefix)) license = proxyPrefix + license;
         config.drm.servers['com.microsoft.playready'] = license;
       } else if (currentDrmType === 'clearkey') {
         const kid = document.getElementById('key-id').value.trim();
@@ -585,7 +600,12 @@
 
       // Update shareable URL bar
       const url = new URL(window.location);
-      url.searchParams.set('stream', streamUrl);
+      url.searchParams.set('stream', rawStreamUrl);
+      if (proxyPrefix) {
+        url.searchParams.set('proxy', proxyPrefix);
+      } else {
+        url.searchParams.delete('proxy');
+      }
       url.searchParams.set('drmScheme', currentDrmType);
       
       if (currentDrmType === 'clearkey') {
